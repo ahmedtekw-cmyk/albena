@@ -1,0 +1,6 @@
+{
+  "appId": "com.radwan.olivepress",
+  "appName": "معصرة الرضوان",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}
