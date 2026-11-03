@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">حساب المنشرة</string>
-    <string name="exit_hint">اضغط رجوع مرة أخرى للخروج</string>
-    <string name="save_ok">تم حفظ الملف بنجاح</string>
-    <string name="save_fail">تعذّر حفظ الملف</string>
-    <string name="no_file_app">لا يوجد تطبيق لحفظ الملفات على هذا الجهاز</string>
-</resources>
