@@ -1,0 +1,72 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to attach the APK to a GitHub Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check project layout
+        run: |
+          for f in settings.gradle build.gradle app/build.gradle app/src/main/AndroidManifest.xml web/almanchara.html; do
+            test -f "$f" || { echo "::error::Missing $f - upload the CONTENTS of the project folder to the repository root"; exit 1; }
+          done
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # The runner image already ships the Android SDK. android-actions/setup-android@v3
+      # fails on it ("Failed to find package 'tools'"), so use the preinstalled SDK directly.
+      - name: Prepare Android SDK
+        run: |
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -n 1)
+          echo "Using $SDKM"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Prepare web app for Android
+        run: python3 tools/apply_android_patches.py
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
+
+      - name: Name the APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk sawmill-account.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sawmill-account-apk
+          path: sawmill-account.apk
+
+      - name: Upload Gradle reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-reports
+          path: |
+            app/build/reports
+            build/reports
+
+      - name: Publish release (only for tags like v1.0.0)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sawmill-account.apk
